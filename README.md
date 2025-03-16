@@ -1,46 +1,85 @@
-# Getting Started with Create React App
+# Currency Converter
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A web-based currency converter application that allows users to convert PKR to multiple currencies and vice versa, view historical exchange rate trends, work offline using cached exchange rates, and more.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Convert PKR to multiple currencies (USD, AED, SAR, GBP, EUR, CAD, etc.) and vice versa
+- View real-time exchange rates with automatic updates
+- Work offline using cached exchange rates
+- Copy conversion results to clipboard
+- Multi-currency conversion in a single view
+- Mobile-friendly responsive design
 
-### `npm start`
+## Upcoming Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Historical exchange rate trends (7 days, 30 days, 1 year)
+- Dark mode support
+- Bookmark favorite currencies for quick access
+- Social sharing options
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Getting Started
 
-### `npm test`
+### Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js (v14 or higher)
+- npm (v6 or higher)
 
-### `npm run build`
+### Installation
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/currency-converter.git
+   cd currency-converter
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. Create a `.env` file in the root directory and add your API key:
+   ```
+   REACT_APP_EXCHANGE_API_KEY=your_api_key_here
+   ```
+   
+   You can get an API key from [Exchange Rates API](https://exchangeratesapi.io/) or any other currency exchange rate API.
 
-### `npm run eject`
+4. Start the development server:
+   ```
+   npm start
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+5. Open [http://localhost:3000](http://localhost:3000) to view the app in your browser.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Technologies Used
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+- React.js with TypeScript
+- React Router for navigation
+- Tailwind CSS for styling
+- Axios for API requests
+- Chart.js for data visualization (coming soon)
+- Local Storage for offline data caching
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## API Integration
 
-## Learn More
+This application uses the Exchange Rates API to fetch real-time and historical exchange rates. You'll need to sign up for an API key at [https://exchangeratesapi.io/](https://exchangeratesapi.io/) or use an alternative API.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Deployment
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+The application can be deployed to Netlify or any other static site hosting service:
+
+```
+npm run build
+```
+
+This will create a production-ready build in the `build` directory.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Exchange Rates API for providing the exchange rate data
+- React and Tailwind CSS communities for the excellent documentation and resources
