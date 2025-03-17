@@ -6,7 +6,7 @@ import {
   saveRatesToStorage, 
   areRatesStale 
 } from '../utils/storage';
-import { REFRESH_INTERVAL, DEFAULT_BASE_CURRENCY } from '../utils/constants';
+import { REFRESH_INTERVAL, DEFAULT_BASE_CURRENCY, API_KEY } from '../utils/constants';
 
 interface UseExchangeRatesResult {
   rates: ExchangeRate | null;
@@ -43,6 +43,11 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
     isFetchingRef.current = true;
     setLoading(true);
     setError(null);
+    
+    // Check if API key is available
+    if (!API_KEY) {
+      console.warn('API key is not set. Using fallback exchange rates.');
+    }
     
     return getLatestRates(baseCurrencyRef.current)
       .then(freshRates => {
