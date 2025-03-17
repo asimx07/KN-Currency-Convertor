@@ -132,7 +132,6 @@ A web-based currency converter that allows users to:
 - [x] 5.3 Implement intelligent fallback using localStorage data
 - [ ] 5.4 Add unit tests for core functionality
 - [ ] 5.5 Add integration tests for API interactions
-- [ ] 5.6 Perform cross-browser testing
 - [x] 5.7 Optimize for mobile devices
 - [x] 5.8 Fix performance issues and state management bugs
 

@@ -169,22 +169,35 @@ const Converter: React.FC = () => {
 
   const handleCopySuccess = (message: string) => {
     setCopySuccess(message);
+    
+    // Clear the success message after 3 seconds
+    setTimeout(() => {
+      setCopySuccess(null);
+    }, 3000);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-        Currency Converter
-      </h1>
+    <div className="container mx-auto px-4">
+      {/* Page Header */}
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent mb-2">
+          Currency Converter
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          Convert between currencies with real-time exchange rates. Add multiple currencies to compare rates at once.
+        </p>
+      </div>
       
       {/* Favorites Section */}
-      <FavoriteCurrencies 
-        onSelectCurrency={handleFavoriteCurrencySelect}
-        className="mb-6"
-      />
+      <div className="mb-8">
+        <FavoriteCurrencies 
+          onSelectCurrency={handleFavoriteCurrencySelect}
+          className="bg-white dark:bg-dark-200 rounded-xl shadow-card p-4 hover:shadow-card-hover transition-shadow duration-300"
+        />
+      </div>
       
       {/* Converter Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+      <div className="bg-white dark:bg-dark-200 rounded-xl shadow-card p-6 mb-8 hover:shadow-card-hover transition-all duration-300">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <AmountInput 
@@ -208,10 +221,10 @@ const Converter: React.FC = () => {
             
             <button 
               onClick={handleSwapCurrencies}
-              className="mb-2 p-2 rounded-md text-gray-500 hover:text-blue-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mb-2 p-2 rounded-lg text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:text-gray-400 dark:hover:text-primary-400 dark:hover:bg-primary-900/20 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200"
               aria-label="Swap currencies"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
               </svg>
             </button>
@@ -242,11 +255,11 @@ const Converter: React.FC = () => {
             date={lastUpdated} 
             loading={ratesLoading} 
             onRefresh={refreshRates} 
-            error={ratesError}
+            error={ratesError ? ratesError.message : null}
           />
           
           {ratesError && (
-            <div className="text-red-500 text-sm">
+            <div className="text-error-500 text-sm bg-error-50 dark:bg-error-900/20 px-3 py-1 rounded-lg">
               Error loading rates. Using cached data.
             </div>
           )}
@@ -259,14 +272,14 @@ const Converter: React.FC = () => {
           <LoadingSpinner />
         </div>
       ) : conversionResults.length > 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+        <div className="bg-white dark:bg-dark-200 rounded-xl shadow-card p-6 hover:shadow-card-hover transition-all duration-300">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
               Conversion Results
             </h2>
             
             {conversionResults.length > 0 && (
-              <SocialShare conversionResult={conversionResults[0]} />
+              <SocialShare result={conversionResults[0]} />
             )}
           </div>
           
@@ -281,7 +294,7 @@ const Converter: React.FC = () => {
           </div>
           
           {copySuccess && (
-            <div className="mt-4 p-2 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-md text-sm">
+            <div className="fixed bottom-4 right-4 mt-4 p-3 bg-success-100 dark:bg-success-900/20 text-success-700 dark:text-success-400 rounded-lg shadow-md text-sm animate-bounce-slow">
               {copySuccess}
             </div>
           )}
