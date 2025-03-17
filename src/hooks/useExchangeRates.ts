@@ -6,7 +6,7 @@ import {
   saveRatesToStorage, 
   areRatesStale 
 } from '../utils/storage';
-import { REFRESH_INTERVAL, API_KEY, DEFAULT_BASE_CURRENCY } from '../utils/constants';
+import { REFRESH_INTERVAL, DEFAULT_BASE_CURRENCY } from '../utils/constants';
 
 interface UseExchangeRatesResult {
   rates: ExchangeRate | null;
@@ -41,7 +41,7 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
     // Only fetch if base currency actually changed
     if (prevBaseCurrency !== baseCurrency) {
       fetchRatesInternal();
-    }
+    } //eslint-disable-next-line
   }, [baseCurrency]);
   
   // Internal fetch function that doesn't depend on any state
@@ -132,7 +132,7 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
       }
-    };
+    }; //eslint-disable-next-line
   }, []); // Empty dependency array - only run on mount/unmount
   
   return {
