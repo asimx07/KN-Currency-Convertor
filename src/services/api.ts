@@ -30,9 +30,9 @@ const fallbackRates: ExchangeRate = {
   timestamp: Date.now(),
 };
 
-// Add a simple request throttling mechanism
+// Add a strong request throttling mechanism to prevent rate limiting
 let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 10000; // 10 seconds minimum between requests
+const MIN_REQUEST_INTERVAL = 10 * 60 * 1000; // 10 minutes minimum between requests
 
 // Helper function to check if we should make a new request
 const shouldMakeRequest = (): boolean => {
@@ -93,17 +93,27 @@ export const getLatestRates = async (base: string = 'USD'): Promise<ExchangeRate
 
     // Check if we should make a new request or use fallback data
     if (!shouldMakeRequest()) {
+      console.log('Using cached or fallback rates due to throttling');
       return getFallbackRates(base);
     }
 
+    console.log('Fetching fresh rates from API...');
+    
     // Most free plans only support EUR as base currency
     // So we'll fetch with EUR as base and convert manually
-    const response = await api.get('/latest');
+    const response = await api.get('/latest', {
+      timeout: 10000, // 10 second timeout
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
     
     // Validate response data
     if (!response.data || !response.data.rates) {
       throw new Error('Invalid response from exchange rate API');
     }
+    
+    console.log('Successfully fetched fresh rates');
     
     // If the requested base is EUR, return as is
     if (base === 'EUR') {
@@ -139,7 +149,28 @@ export const getLatestRates = async (base: string = 'USD'): Promise<ExchangeRate
       timestamp: Date.now(),
     };
   } catch (error) {
-    console.error('Error fetching latest rates:', error);
+    // Handle specific error types
+    const axiosError = error as any;
+    
+    if (axiosError.response) {
+      const status = axiosError.response.status;
+      
+      if (status === 429) {
+        console.error('Rate limit exceeded (429). Using cached or fallback rates.');
+        // Extend the throttling time on rate limit errors
+        lastRequestTime = Date.now();
+      } else if (status === 401) {
+        console.error('API key is invalid or expired (401). Using cached or fallback rates.');
+      } else {
+        console.error(`API error (${status}): Using cached or fallback rates.`);
+      }
+    } else if (axiosError.request) {
+      // The request was made but no response was received
+      console.error('No response received from API. Using cached or fallback rates.');
+    } else {
+      // Something happened in setting up the request
+      console.error('Error setting up API request:', error);
+    }
     
     // Return cached or fallback rates if API call fails
     return getFallbackRates(base);
@@ -160,9 +191,12 @@ export const getHistoricalRates = async (
 
     // Check if we should make a new request or use fallback data
     if (!shouldMakeRequest()) {
+      console.log('Throttling historical API request - using generated data');
       return generateFallbackHistoricalData(base, target, days);
     }
 
+    console.log('Fetching historical rates from API...');
+    
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
@@ -181,6 +215,7 @@ export const getHistoricalRates = async (
         end_date: formattedEndDate,
         symbols: symbols,
       },
+      timeout: 15000, // 15 second timeout
     });
     
     // Validate response data
@@ -232,7 +267,28 @@ export const getHistoricalRates = async (
       rates: validRates,
     };
   } catch (error) {
-    console.error('Error fetching historical rates:', error);
+    // Handle specific error types
+    const axiosError = error as any;
+    
+    if (axiosError.response) {
+      const status = axiosError.response.status;
+      
+      if (status === 429) {
+        console.error('Rate limit exceeded (429) for historical data. Using generated data.');
+        // Extend the throttling time on rate limit errors
+        lastRequestTime = Date.now();
+      } else if (status === 401) {
+        console.error('API key is invalid or expired (401) for historical data. Using generated data.');
+      } else {
+        console.error(`API error (${status}) for historical data. Using generated data.`);
+      }
+    } else if (axiosError.request) {
+      // The request was made but no response was received
+      console.error('No response received from API for historical data. Using generated data.');
+    } else {
+      // Something happened in setting up the request
+      console.error('Error setting up historical API request:', error);
+    }
     
     // Return generated historical data if API call fails
     return generateFallbackHistoricalData(base, target, days);

@@ -16,7 +16,10 @@ interface UseExchangeRatesResult {
   refreshRates: () => void;
 }
 
-// Simple hook implementation without complex state management
+// Track the last API request time globally to prevent rate limiting
+let lastApiRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 10 * 60 * 1000; // 10 minutes minimum between API calls
+
 const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExchangeRatesResult => {
   // Initialize state from localStorage
   const initialRates = useRef(getRatesFromStorage()).current;
@@ -35,15 +38,39 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
   
-  // Fetch rates function
-  const fetchRates = useCallback(async () => {
+  // Check if we should make an API request based on rate limiting
+  const shouldMakeApiRequest = useCallback(() => {
+    const now = Date.now();
+    if (now - lastApiRequestTime < MIN_REQUEST_INTERVAL) {
+      console.log('Throttling API request - using cached data');
+      return false;
+    }
+    return true;
+  }, []);
+  
+  // Fetch rates function with rate limiting
+  const fetchRates = useCallback(async (forceRefresh = false) => {
     // Prevent concurrent fetches
     if (isFetchingRef.current || !mountedRef.current) return;
+    
+    // Check rate limiting unless forced refresh
+    if (!forceRefresh && !shouldMakeApiRequest()) {
+      // Use cached rates instead
+      const cachedRates = getRatesFromStorage();
+      if (cachedRates) {
+        setRates(cachedRates);
+        setLastUpdated(new Date(cachedRates.timestamp));
+        return;
+      }
+    }
     
     isFetchingRef.current = true;
     setLoading(true);
     
     try {
+      // Update the last request time
+      lastApiRequestTime = Date.now();
+      
       const freshRates = await getLatestRates(currentBaseCurrencyRef.current);
       
       if (mountedRef.current) {
@@ -56,6 +83,13 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
       if (!mountedRef.current) return;
       
       console.error('Error fetching rates:', err);
+      
+      // Handle rate limit errors specifically
+      const axiosError = err as any;
+      if (axiosError.response && axiosError.response.status === 429) {
+        console.warn('Rate limit exceeded (429). Using cached data and will retry later.');
+      }
+      
       setError(new Error(err instanceof Error ? err.message : 'Failed to fetch rates'));
       
       // Use cached rates if available
@@ -70,11 +104,11 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
       }
       isFetchingRef.current = false;
     }
-  }, []);
+  }, [shouldMakeApiRequest]);
   
-  // Public refresh function
+  // Public refresh function - force refresh regardless of rate limiting
   const refreshRates = useCallback(() => {
-    fetchRates();
+    fetchRates(true);
   }, [fetchRates]);
   
   // Update base currency ref when it changes
@@ -83,25 +117,25 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
     
     // Only fetch if we have a different base currency
     if (rates && rates.base !== baseCurrency && !isFetchingRef.current) {
-      fetchRates();
+      fetchRates(false);
     }
-  }, [baseCurrency, fetchRates, rates]);
+  }, [baseCurrency, fetchRates]);
   
-  // Initial fetch and interval setup
+  // Initial fetch and interval setup - ONLY RUN ONCE
   useEffect(() => {
     mountedRef.current = true;
     
     // Initial fetch if needed
-    if (!rates || areRatesStale(REFRESH_INTERVAL)) {
-      fetchRates();
+    if (!initialRates || areRatesStale(REFRESH_INTERVAL)) {
+      fetchRates(false);
     }
     
-    // Set up refresh interval
+    // Set up refresh interval - much less frequent to avoid rate limiting
     intervalRef.current = setInterval(() => {
       if (!isFetchingRef.current) {
-        fetchRates();
+        fetchRates(false);
       }
-    }, REFRESH_INTERVAL);
+    }, REFRESH_INTERVAL * 6); // 6 hours if REFRESH_INTERVAL is 1 hour
     
     // Cleanup
     return () => {
@@ -112,7 +146,7 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
         intervalRef.current = null;
       }
     };
-  }, [fetchRates, rates]);
+  }, [fetchRates]); // Remove rates dependency to prevent infinite loop
   
   return {
     rates,
