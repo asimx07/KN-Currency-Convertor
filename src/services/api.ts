@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_BASE_URL, API_KEY } from '../utils/constants';
 import { ExchangeRate, HistoricalData } from '../types';
+import { getRatesFromStorage } from '../utils/storage';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -10,20 +11,21 @@ const api = axios.create({
   },
 });
 
-// Fallback exchange rates in case the API is not available
+// Fallback exchange rates in case the API is not available and no cached rates exist
 const fallbackRates: ExchangeRate = {
-  base: 'PKR',
+  base: 'USD',
   date: new Date().toISOString().split('T')[0],
   rates: {
-    USD: 0.0036,
-    EUR: 0.0033,
-    GBP: 0.0028,
-    AED: 0.0132,
-    SAR: 0.0135,
-    CAD: 0.0049,
-    AUD: 0.0054,
-    JPY: 0.5400,
-    CNY: 0.0260,
+    EUR: 0.92,
+    GBP: 0.78,
+    JPY: 150.25,
+    CAD: 1.35,
+    AUD: 1.52,
+    CNY: 7.23,
+    INR: 83.12,
+    PKR: 278.45,
+    AED: 3.67,
+    SAR: 3.75,
   },
   timestamp: Date.now(),
 };
@@ -43,25 +45,55 @@ const shouldMakeRequest = (): boolean => {
   return true;
 };
 
-export const getLatestRates = async (base: string = 'PKR'): Promise<ExchangeRate> => {
+// Helper function to get fallback rates (from localStorage or hardcoded)
+const getFallbackRates = (base: string): ExchangeRate => {
+  // First try to get rates from localStorage
+  const cachedRates = getRatesFromStorage();
+  
+  if (cachedRates) {
+    // If the cached rates have the same base, use them directly
+    if (cachedRates.base === base) {
+      return cachedRates;
+    }
+    
+    // If we have cached rates but with a different base, try to convert them
+    if (cachedRates.rates[base]) {
+      const baseRate = cachedRates.rates[base];
+      const convertedRates: Record<string, number> = {};
+      
+      // Convert all rates to the new base currency
+      for (const [currency, rate] of Object.entries(cachedRates.rates)) {
+        convertedRates[currency] = (rate as number) / baseRate;
+      }
+      
+      return {
+        base,
+        date: cachedRates.date,
+        rates: convertedRates,
+        timestamp: Date.now(),
+      };
+    }
+  }
+  
+  // If no cached rates or can't convert, use hardcoded fallback
+  return {
+    ...fallbackRates,
+    base,
+    timestamp: Date.now(),
+  };
+};
+
+export const getLatestRates = async (base: string = 'USD'): Promise<ExchangeRate> => {
   try {
     // Check if API key is available
     if (!API_KEY) {
-      console.warn('API key is not set. Using fallback exchange rates.');
-      return {
-        ...fallbackRates,
-        base,
-        timestamp: Date.now(),
-      };
+      console.warn('API key is not set. Using cached or fallback exchange rates.');
+      return getFallbackRates(base);
     }
 
     // Check if we should make a new request or use fallback data
     if (!shouldMakeRequest()) {
-      return {
-        ...fallbackRates,
-        base,
-        timestamp: Date.now(),
-      };
+      return getFallbackRates(base);
     }
 
     // Most free plans only support EUR as base currency
@@ -87,12 +119,8 @@ export const getLatestRates = async (base: string = 'PKR'): Promise<ExchangeRate
     
     // If the requested base currency isn't in the rates, use fallback
     if (!baseRate) {
-      console.warn(`Base currency ${base} not found in API response. Using fallback rates.`);
-      return {
-        ...fallbackRates,
-        base,
-        timestamp: Date.now(),
-      };
+      console.warn(`Base currency ${base} not found in API response. Using cached or fallback rates.`);
+      return getFallbackRates(base);
     }
     
     // Convert all rates to the new base currency
@@ -113,12 +141,8 @@ export const getLatestRates = async (base: string = 'PKR'): Promise<ExchangeRate
   } catch (error) {
     console.error('Error fetching latest rates:', error);
     
-    // Return fallback rates if API call fails
-    return {
-      ...fallbackRates,
-      base,
-      timestamp: Date.now(),
-    };
+    // Return cached or fallback rates if API call fails
+    return getFallbackRates(base);
   }
 };
 
@@ -217,9 +241,12 @@ export const getHistoricalRates = async (
 
 // Helper function to generate fallback historical data
 const generateFallbackHistoricalData = (base: string, target: string, days: number): HistoricalData => {
+  // Get the current exchange rate from cached or fallback rates
+  const currentRates = getFallbackRates(base);
+  const baseRate = currentRates.rates[target] || 1;
+  
   const dates: string[] = [];
   const rates: number[] = [];
-  const baseRate = fallbackRates.rates[target] || 1;
   
   // Generate dates and slightly varying rates for the specified number of days
   const endDate = new Date();

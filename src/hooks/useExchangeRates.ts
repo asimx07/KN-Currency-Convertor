@@ -6,7 +6,7 @@ import {
   saveRatesToStorage, 
   areRatesStale 
 } from '../utils/storage';
-import { REFRESH_INTERVAL, API_KEY } from '../utils/constants';
+import { REFRESH_INTERVAL, API_KEY, DEFAULT_BASE_CURRENCY } from '../utils/constants';
 
 interface UseExchangeRatesResult {
   rates: ExchangeRate | null;
@@ -16,7 +16,7 @@ interface UseExchangeRatesResult {
   refreshRates: () => Promise<void>;
 }
 
-const useExchangeRates = (baseCurrency: string = 'PKR'): UseExchangeRatesResult => {
+const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExchangeRatesResult => {
   const [rates, setRates] = useState<ExchangeRate | null>(getRatesFromStorage());
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);

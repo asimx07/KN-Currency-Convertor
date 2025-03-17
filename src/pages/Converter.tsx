@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AmountInput from '../components/AmountInput';
 import CurrencySelect from '../components/CurrencySelect';
 import MultiCurrencySelect from '../components/MultiCurrencySelect';
@@ -14,28 +14,35 @@ import { getPreferencesFromStorage, savePreferencesToStorage } from '../utils/st
 const Converter: React.FC = () => {
   const [amount, setAmount] = useState<string>('1');
   const [fromCurrency, setFromCurrency] = useState<string>(DEFAULT_BASE_CURRENCY);
-  const [toCurrencies, setToCurrencies] = useState<string[]>(DEFAULT_TARGET_CURRENCIES);
+  const [toCurrency, setToCurrency] = useState<string>(DEFAULT_TARGET_CURRENCIES[0]);
+  const [additionalCurrencies, setAdditionalCurrencies] = useState<string[]>(DEFAULT_TARGET_CURRENCIES.slice(1));
   const [conversionResults, setConversionResults] = useState<ConversionResultType[]>([]);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
-  const [isReversed, setIsReversed] = useState<boolean>(false);
   
   // Debounce timer for amount changes
   const [debouncedAmount, setDebouncedAmount] = useState<string>(amount);
-
-  // Use the appropriate base currency based on the conversion direction
-  const baseCurrency = isReversed ? (toCurrencies.length > 0 ? toCurrencies[0] : DEFAULT_TARGET_CURRENCIES[0]) : fromCurrency;
   
-  const { rates, loading: ratesLoading, error: ratesError, lastUpdated, refreshRates } = useExchangeRates(baseCurrency);
+  // Use a ref to track if we should skip the conversion effect
+  const skipConversionRef = useRef(false);
+
+  // Get rates for the base currency
+  const { rates, loading: ratesLoading, error: ratesError, lastUpdated, refreshRates } = useExchangeRates(fromCurrency);
   const { convert, loading: conversionLoading } = useCurrencyConverter();
+
+  // Target currencies include the main toCurrency and any additional currencies
+  // Memoize this to prevent unnecessary re-renders
+  const targetCurrencies = useCallback(() => {
+    return [toCurrency, ...additionalCurrencies];
+  }, [toCurrency, additionalCurrencies]);
 
   // Load user preferences
   useEffect(() => {
     const preferences = getPreferencesFromStorage();
     setFromCurrency(preferences.lastUsedCurrencies.from);
-    setToCurrencies(preferences.lastUsedCurrencies.to);
-    // Load the reversed state if it exists in preferences
-    if (preferences.isReversed !== undefined) {
-      setIsReversed(preferences.isReversed);
+    
+    if (preferences.lastUsedCurrencies.to.length > 0) {
+      setToCurrency(preferences.lastUsedCurrencies.to[0]);
+      setAdditionalCurrencies(preferences.lastUsedCurrencies.to.slice(1));
     }
   }, []);
 
@@ -46,12 +53,11 @@ const Converter: React.FC = () => {
       ...preferences,
       lastUsedCurrencies: {
         from: fromCurrency,
-        to: toCurrencies,
+        to: [toCurrency, ...additionalCurrencies],
       },
-      isReversed,
     };
     savePreferencesToStorage(updatedPreferences);
-  }, [fromCurrency, toCurrencies, isReversed]);
+  }, [fromCurrency, toCurrency, additionalCurrencies]);
 
   // Debounce amount changes to prevent excessive conversions
   useEffect(() => {
@@ -64,33 +70,63 @@ const Converter: React.FC = () => {
 
   // Perform conversion when inputs change or rates are updated
   useEffect(() => {
-    if (debouncedAmount && fromCurrency && toCurrencies.length > 0 && rates) {
-      const numericAmount = parseFloat(debouncedAmount);
-      if (!isNaN(numericAmount)) {
-        if (isReversed) {
-          // In reversed mode, convert from the first target currency to the base currency
-          const targetCurrency = toCurrencies[0];
-          const results = convert(numericAmount, targetCurrency, [fromCurrency]);
-          setConversionResults(results);
-        } else {
-          // Normal mode: convert from base to all target currencies
-          const results = convert(numericAmount, fromCurrency, toCurrencies);
-          setConversionResults(results);
-        }
-      }
+    // Skip if we're in the middle of a toggle operation
+    if (skipConversionRef.current) {
+      skipConversionRef.current = false;
+      return;
     }
-  }, [debouncedAmount, fromCurrency, toCurrencies, rates, convert, isReversed]);
+    
+    if (!debouncedAmount || !rates) {
+      return;
+    }
+    
+    const numericAmount = parseFloat(debouncedAmount);
+    const currentTargets = targetCurrencies();
+    
+    if (isNaN(numericAmount) || currentTargets.length === 0) {
+      return;
+    }
+    
+    // Perform the conversion
+    const results = convert(numericAmount, fromCurrency, currentTargets);
+    setConversionResults(results);
+    
+  }, [debouncedAmount, fromCurrency, rates, convert, targetCurrencies]);
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
   };
 
   const handleFromCurrencyChange = (value: string) => {
+    // Don't allow the same currency for both sides
+    if (value === toCurrency) {
+      setToCurrency(fromCurrency);
+    }
     setFromCurrency(value);
+    
+    // Remove the selected currency from additional currencies if it's there
+    if (additionalCurrencies.includes(value)) {
+      setAdditionalCurrencies(additionalCurrencies.filter(c => c !== value));
+    }
   };
 
-  const handleToCurrenciesChange = (currencies: string[]) => {
-    setToCurrencies(currencies);
+  const handleToCurrencyChange = (value: string) => {
+    // Don't allow the same currency for both sides
+    if (value === fromCurrency) {
+      setFromCurrency(toCurrency);
+    }
+    setToCurrency(value);
+    
+    // Remove the selected currency from additional currencies if it's there
+    if (additionalCurrencies.includes(value)) {
+      setAdditionalCurrencies(additionalCurrencies.filter(c => c !== value));
+    }
+  };
+
+  const handleAdditionalCurrenciesChange = (currencies: string[]) => {
+    // Filter out fromCurrency and toCurrency from additional currencies
+    const filteredCurrencies = currencies.filter(c => c !== fromCurrency && c !== toCurrency);
+    setAdditionalCurrencies(filteredCurrencies);
   };
 
   // Memoized copy function to prevent unnecessary re-renders
@@ -114,9 +150,20 @@ const Converter: React.FC = () => {
   }, [refreshRates]);
 
   // Toggle between normal and reversed conversion
-  const handleDirectionToggle = () => {
-    setIsReversed(!isReversed);
-  };
+  const handleDirectionToggle = useCallback(() => {
+    // Set the flag to skip the next conversion effect
+    skipConversionRef.current = true;
+    
+    // Swap fromCurrency and toCurrency
+    const tempCurrency = fromCurrency;
+    setFromCurrency(toCurrency);
+    setToCurrency(tempCurrency);
+    
+    // Force a refresh of the rates with the new base currency
+    setTimeout(() => {
+      refreshRates();
+    }, 100);
+  }, [fromCurrency, toCurrency, refreshRates]);
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -136,23 +183,23 @@ const Converter: React.FC = () => {
         {/* Direction toggle */}
         <div className="flex justify-end mb-4">
           <div className="flex items-center">
-            <span className={`mr-2 text-sm ${isReversed ? 'text-gray-500' : 'font-medium text-gray-700 dark:text-white'}`}>
-              PKR to Foreign
+            <span className="mr-2 text-sm font-medium text-gray-700 dark:text-white">
+              {fromCurrency} to {toCurrency}
             </span>
             <button 
               type="button"
               onClick={handleDirectionToggle}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isReversed ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
-              aria-pressed={isReversed}
+              className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 bg-blue-600"
+              aria-pressed="false"
               aria-labelledby="conversion-direction"
             >
               <span className="sr-only">Toggle conversion direction</span>
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isReversed ? 'translate-x-6' : 'translate-x-1'}`}
+                className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6"
               />
             </button>
-            <span className={`ml-2 text-sm ${isReversed ? 'font-medium text-gray-700 dark:text-white' : 'text-gray-500'}`}>
-              Foreign to PKR
+            <span className="ml-2 text-sm text-gray-500">
+              {toCurrency} to {fromCurrency}
             </span>
           </div>
         </div>
@@ -161,48 +208,38 @@ const Converter: React.FC = () => {
           <AmountInput
             value={amount}
             onChange={handleAmountChange}
-            currencyCode={isReversed ? (toCurrencies.length > 0 ? toCurrencies[0] : DEFAULT_TARGET_CURRENCIES[0]) : fromCurrency}
+            currencyCode={fromCurrency}
             disabled={ratesLoading}
           />
           
-          {isReversed ? (
-            <CurrencySelect
-              id="to-currency"
-              label="From Currency"
-              value={toCurrencies.length > 0 ? toCurrencies[0] : DEFAULT_TARGET_CURRENCIES[0]}
-              onChange={(value) => setToCurrencies([value])}
-              disabled={ratesLoading}
-            />
-          ) : (
-            <CurrencySelect
-              id="from-currency"
-              label="From Currency"
-              value={fromCurrency}
-              onChange={handleFromCurrencyChange}
-              disabled={ratesLoading}
-            />
-          )}
+          <CurrencySelect
+            id="from-currency"
+            label="From Currency"
+            value={fromCurrency}
+            onChange={handleFromCurrencyChange}
+            disabled={ratesLoading}
+          />
         </div>
         
         <div className="mb-4">
-          {isReversed ? (
-            <CurrencySelect
-              id="from-currency-reversed"
-              label="To Currency"
-              value={fromCurrency}
-              onChange={handleFromCurrencyChange}
-              disabled={ratesLoading}
-            />
-          ) : (
-            <MultiCurrencySelect
-              id="to-currencies"
-              label="To Currencies"
-              selectedCurrencies={toCurrencies}
-              onChange={handleToCurrenciesChange}
-              excludeCurrency={fromCurrency}
-              disabled={ratesLoading}
-            />
-          )}
+          <CurrencySelect
+            id="to-currency"
+            label="To Currency"
+            value={toCurrency}
+            onChange={handleToCurrencyChange}
+            disabled={ratesLoading}
+          />
+        </div>
+        
+        <div className="mb-4">
+          <MultiCurrencySelect
+            id="additional-currencies"
+            label="Additional Currencies"
+            selectedCurrencies={additionalCurrencies}
+            onChange={handleAdditionalCurrenciesChange}
+            excludeCurrency={`${fromCurrency},${toCurrency}`}
+            disabled={ratesLoading}
+          />
         </div>
         
         <div className="flex justify-between items-center">

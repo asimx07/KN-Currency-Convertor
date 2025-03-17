@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Currency } from '../types';
 import { CURRENCIES } from '../utils/constants';
 
@@ -21,17 +21,61 @@ const MultiCurrencySelect: React.FC<MultiCurrencySelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredCurrencies, setFilteredCurrencies] = useState<Currency[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Filter currencies when excludeCurrency changes
+  // Filter out excluded currencies
   useEffect(() => {
-    setFilteredCurrencies(
-      CURRENCIES.filter((currency) => currency.code !== excludeCurrency)
-    );
+    if (!excludeCurrency) {
+      setAvailableCurrencies(CURRENCIES);
+      return;
+    }
+    
+    // Handle multiple excluded currencies separated by commas
+    const excludedCodes = excludeCurrency.split(',').filter(code => code.trim() !== '');
+    
+    const filtered = CURRENCIES.filter((currency) => !excludedCodes.includes(currency.code));
+    setAvailableCurrencies(filtered);
   }, [excludeCurrency]);
+
+  // Filter currencies based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredCurrencies(availableCurrencies);
+      return;
+    }
+    
+    const lowerCaseSearch = searchTerm.toLowerCase();
+    const filtered = availableCurrencies.filter(currency => 
+      currency.code.toLowerCase().includes(lowerCaseSearch) || 
+      currency.name.toLowerCase().includes(lowerCaseSearch)
+    );
+    
+    setFilteredCurrencies(filtered);
+  }, [searchTerm, availableCurrencies]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleToggle = () => {
     if (!disabled) {
       setIsOpen(!isOpen);
+      if (!isOpen) {
+        setSearchTerm('');
+        setFilteredCurrencies(availableCurrencies);
+      }
     }
   };
 
@@ -59,23 +103,12 @@ const MultiCurrencySelect: React.FC<MultiCurrencySelectProps> = ({
     onChange([]);
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (isOpen && !target.closest(`#${id}-container`)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, id]);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
 
   return (
-    <div className="w-full relative" id={`${id}-container`}>
+    <div className="w-full relative" id={`${id}-container`} ref={dropdownRef}>
       <label 
         htmlFor={id} 
         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -125,49 +158,64 @@ const MultiCurrencySelect: React.FC<MultiCurrencySelectProps> = ({
       
       {isOpen && (
         <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-300 dark:border-gray-700 max-h-60 overflow-auto">
-          <div className="sticky top-0 bg-gray-50 dark:bg-gray-900 p-2 border-b border-gray-200 dark:border-gray-700 flex justify-between">
-            <button
-              type="button"
-              onClick={handleSelectAll}
-              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-            >
-              Select All
-            </button>
-            <button
-              type="button"
-              onClick={handleClearAll}
-              className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-            >
-              Clear All
-            </button>
+          <div className="sticky top-0 bg-gray-50 dark:bg-gray-900 p-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between mb-2">
+              <button
+                type="button"
+                onClick={handleSelectAll}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+              >
+                Clear All
+              </button>
+            </div>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Search by currency code or name..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              autoFocus
+            />
           </div>
           <ul className="py-1" role="listbox">
-            {filteredCurrencies.map((currency) => {
-              const isSelected = selectedCurrencies.includes(currency.code);
-              return (
-                <li
-                  key={currency.code}
-                  onClick={() => handleCurrencyToggle(currency.code)}
-                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                    isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''
-                  }`}
-                  role="option"
-                  aria-selected={isSelected}
-                >
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-gray-900 dark:text-white">
-                      {currency.code} - {currency.name} ({currency.symbol})
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
+            {filteredCurrencies.length > 0 ? (
+              filteredCurrencies.map((currency) => {
+                const isSelected = selectedCurrencies.includes(currency.code);
+                return (
+                  <li
+                    key={currency.code}
+                    onClick={() => handleCurrencyToggle(currency.code)}
+                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                      isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                    }`}
+                    role="option"
+                    aria-selected={isSelected}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="ml-2 font-medium">{currency.code}</span>
+                      <span className="ml-2 text-gray-500 dark:text-gray-400">- {currency.name} ({currency.symbol})</span>
+                    </div>
+                  </li>
+                );
+              })
+            ) : (
+              <li className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                No currencies found
+              </li>
+            )}
           </ul>
         </div>
       )}
