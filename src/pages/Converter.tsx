@@ -61,7 +61,7 @@ const Converter: React.FC = () => {
       setFromCurrency(toCurrenciesFromPrefs[0]);
       setToCurrency(fromCurrencyFromPrefs);
     }
-  }, []); // Empty dependency array - only run once on mount
+  }, [preferences.isReversed, preferences.lastUsedCurrencies.from, preferences.lastUsedCurrencies.to]);
 
   // Save user preferences when they change
   useEffect(() => {

@@ -33,17 +33,6 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
   const baseCurrencyRef = useRef(baseCurrency);
   const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Update baseCurrency ref when prop changes
-  useEffect(() => {
-    const prevBaseCurrency = baseCurrencyRef.current;
-    baseCurrencyRef.current = baseCurrency;
-    
-    // Only fetch if base currency actually changed
-    if (prevBaseCurrency !== baseCurrency) {
-      fetchRatesInternal();
-    } //eslint-disable-next-line
-  }, [baseCurrency]);
-  
   // Internal fetch function that doesn't depend on any state
   const fetchRatesInternal = useCallback(() => {
     // Prevent concurrent fetches
@@ -105,12 +94,16 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
       });
   }, []);
   
-  // Public refresh function
-  const refreshRates = useCallback((): Promise<void> => {
-    return fetchRatesInternal()
-      .then(() => {}) // Convert any successful result to void
-      .catch(() => {}); // Swallow errors as they're already handled in fetchRatesInternal
-  }, [fetchRatesInternal]);
+  // Update baseCurrency ref when prop changes
+  useEffect(() => {
+    const prevBaseCurrency = baseCurrencyRef.current;
+    baseCurrencyRef.current = baseCurrency;
+    
+    // Only fetch if base currency actually changed
+    if (prevBaseCurrency !== baseCurrency) {
+      fetchRatesInternal();
+    }
+  }, [baseCurrency, fetchRatesInternal]);
   
   // Setup initial fetch and interval - only run once on mount
   useEffect(() => {
@@ -132,8 +125,15 @@ const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExch
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
       }
-    }; //eslint-disable-next-line
-  }, []); // Empty dependency array - only run on mount/unmount
+    };
+  }, [fetchRatesInternal]);
+  
+  // Public refresh function
+  const refreshRates = useCallback((): Promise<void> => {
+    return fetchRatesInternal()
+      .then(() => {}) // Convert any successful result to void
+      .catch(() => {}); // Swallow errors as they're already handled in fetchRatesInternal
+  }, [fetchRatesInternal]);
   
   return {
     rates,
