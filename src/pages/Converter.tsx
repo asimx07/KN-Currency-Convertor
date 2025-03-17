@@ -14,7 +14,7 @@ import { ConversionResult as ConversionResultType } from '../types';
 import { DEFAULT_BASE_CURRENCY, DEFAULT_TARGET_CURRENCIES } from '../utils/constants';
 
 const Converter: React.FC = () => {
-  const [amount, setAmount] = useState<string>('1');
+  const [amount, setAmount] = useState<number>(1);
   const [fromCurrency, setFromCurrency] = useState<string>(DEFAULT_BASE_CURRENCY);
   const [toCurrency, setToCurrency] = useState<string>(DEFAULT_TARGET_CURRENCIES[0]);
   const [additionalCurrencies, setAdditionalCurrencies] = useState<string[]>(DEFAULT_TARGET_CURRENCIES.slice(1));
@@ -24,8 +24,8 @@ const Converter: React.FC = () => {
   // Get user preferences
   const { preferences, updateLastUsedCurrencies, toggleReversed } = useUserPreferences();
   
-  // Debounce timer for amount changes
-  const [debouncedAmount, setDebouncedAmount] = useState<string>(amount);
+  // Debounce timer for amount changes - changed to number type
+  const [debouncedAmount, setDebouncedAmount] = useState<number>(amount);
   
   // Use refs to track component state
   const skipConversionRef = useRef(false);
@@ -74,7 +74,7 @@ const Converter: React.FC = () => {
     updateLastUsedCurrencies(fromCurrency, [toCurrency, ...additionalCurrencies]);
   }, [fromCurrency, toCurrency, additionalCurrencies, updateLastUsedCurrencies]);
 
-  // Debounce amount changes
+  // Debounce amount changes - updated to use number type
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedAmount(amount);
@@ -82,7 +82,7 @@ const Converter: React.FC = () => {
     return () => clearTimeout(timer);
   }, [amount]);
 
-  // Perform conversion when relevant inputs change
+  // Perform conversion when relevant inputs change - updated to use number type
   useEffect(() => {
     if (skipConversionRef.current) {
       skipConversionRef.current = false;
@@ -90,14 +90,14 @@ const Converter: React.FC = () => {
     }
 
     const performConversion = async () => {
-      if (!debouncedAmount || isNaN(parseFloat(debouncedAmount)) || parseFloat(debouncedAmount) <= 0) {
+      if (debouncedAmount <= 0) {
         setConversionResults([]);
         return;
       }
 
       // Convert to all target currencies at once
       const results = await convert(
-        parseFloat(debouncedAmount),
+        debouncedAmount,
         fromCurrency,
         targetCurrencies()
       );
@@ -108,7 +108,7 @@ const Converter: React.FC = () => {
     performConversion();
   }, [debouncedAmount, fromCurrency, toCurrency, additionalCurrencies, convert, targetCurrencies]);
 
-  const handleAmountChange = (value: string) => {
+  const handleAmountChange = (value: number) => {
     setAmount(value);
   };
 
