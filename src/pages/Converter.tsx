@@ -78,7 +78,7 @@ const Converter: React.FC = () => {
     }
     
     updateLastUsedCurrencies(fromCurrency, [toCurrency, ...additionalCurrencies]);
-  }, [fromCurrency, toCurrency, additionalCurrencies, updateLastUsedCurrencies, preferences.lastUsedCurrencies]);
+  }, [fromCurrency, toCurrency, additionalCurrencies, updateLastUsedCurrencies]);
 
   // Debounce amount changes - updated to use number type
   useEffect(() => {
