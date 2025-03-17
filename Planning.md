@@ -105,15 +105,15 @@ A web-based currency converter that allows users to:
 **Progress Marker 2**: ✅ Enhanced conversion with offline support and multi-currency view
 
 ## Phase 3: Historical Data and Visualization [Week 3]
-- [ ] 3.1 Integrate historical exchange rate API
-- [ ] 3.2 Implement date range selection (7 days, 30 days, 1 year)
-- [ ] 3.3 Add charting library (Chart.js or Recharts)
-- [ ] 3.4 Create graph visualization for historical trends
-- [ ] 3.5 Implement interactive elements on the graph
-- [ ] 3.6 Add data tooltips and information display
-- [ ] 3.7 Optimize graph performance
+- [x] 3.1 Integrate historical exchange rate API
+- [x] 3.2 Implement date range selection (7 days, 30 days, 6 months, 1 year)
+- [x] 3.3 Add charting library (Chart.js)
+- [x] 3.4 Create graph visualization for historical trends
+- [x] 3.5 Implement interactive elements on the graph
+- [x] 3.6 Add data tooltips and information display
+- [x] 3.7 Optimize graph performance
 
-**Progress Marker 3**: ❌ Historical data visualization working
+**Progress Marker 3**: ✅ Historical data visualization working
 
 ## Phase 4: User Preferences and Advanced Features [Week 4]
 - [ ] 4.1 Implement dark/light mode toggle with theme persistence
@@ -165,7 +165,7 @@ A web-based currency converter that allows users to:
 - **State Management**: Context API ✅
 - **Styling**: Tailwind CSS ✅
 - **Routing**: React Router ✅
-- **Charts**:  Chart.js ❌
+- **Charts**: Chart.js ✅
 - **HTTP Client**: Axios ✅
 - **Form Handling**: React Hook Form ❌
 - **Testing**: Jest and React Testing Library ❌
