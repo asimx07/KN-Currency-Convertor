@@ -101,8 +101,15 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
   const updateLastUsedCurrencies = useCallback((from: string, to: string[]) => {
     setPreferences(prev => {
       // Skip update if values are the same to prevent infinite loops
-      if (prev.lastUsedCurrencies.from === from && 
-          JSON.stringify(prev.lastUsedCurrencies.to) === JSON.stringify(to)) {
+      const prevTo = prev.lastUsedCurrencies.to || [];
+      const prevFrom = prev.lastUsedCurrencies.from || '';
+      
+      // Deep comparison of arrays
+      const toArraysEqual = 
+        prevTo.length === to.length && 
+        prevTo.every((val, idx) => val === to[idx]);
+      
+      if (prevFrom === from && toArraysEqual) {
         return prev;
       }
       

@@ -32,7 +32,7 @@ const Converter: React.FC = () => {
   const isInitialRenderRef = useRef(true);
 
   // Get rates for the base currency
-  const { rates, loading: ratesLoading, error: ratesError, lastUpdated, refreshRates } = useExchangeRates(fromCurrency);
+  const { loading: ratesLoading, error: ratesError, lastUpdated, refreshRates } = useExchangeRates(fromCurrency);
   const { convert, loading: conversionLoading } = useCurrencyConverter();
 
   // Target currencies include the main toCurrency and any additional currencies
@@ -61,7 +61,7 @@ const Converter: React.FC = () => {
       setFromCurrency(toCurrenciesFromPrefs[0]);
       setToCurrency(fromCurrencyFromPrefs);
     }
-  }, []);
+  }, []); // Empty dependency array - only run once on mount
 
   // Save user preferences when they change
   useEffect(() => {
@@ -71,8 +71,14 @@ const Converter: React.FC = () => {
       return;
     }
     
+    // Check if the values have actually changed before updating
+    if (preferences.lastUsedCurrencies.from === fromCurrency && 
+        JSON.stringify(preferences.lastUsedCurrencies.to) === JSON.stringify([toCurrency, ...additionalCurrencies])) {
+      return;
+    }
+    
     updateLastUsedCurrencies(fromCurrency, [toCurrency, ...additionalCurrencies]);
-  }, [fromCurrency, toCurrency, additionalCurrencies, updateLastUsedCurrencies]);
+  }, [fromCurrency, toCurrency, additionalCurrencies, updateLastUsedCurrencies, preferences.lastUsedCurrencies]);
 
   // Debounce amount changes - updated to use number type
   useEffect(() => {
@@ -144,8 +150,24 @@ const Converter: React.FC = () => {
     // Also toggle the reversed state in preferences
     toggleReversed();
     
-    // Skip the next conversion effect since we're manually updating the results
+    // Skip the next automatic conversion effect
     skipConversionRef.current = true;
+    
+    // Manually perform the conversion with swapped currencies
+    const performSwappedConversion = async () => {
+      if (amount <= 0) return;
+      
+      // Convert with the swapped currencies
+      const results = await convert(
+        amount,
+        toCurrency, // This is the new fromCurrency (was toCurrency before swap)
+        [tempFrom, ...additionalCurrencies.filter(c => c !== toCurrency)] // New target currencies
+      );
+      
+      setConversionResults(results);
+    };
+    
+    performSwappedConversion();
   };
 
   const handleFavoriteCurrencySelect = (currencyCode: string) => {

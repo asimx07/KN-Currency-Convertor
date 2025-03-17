@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef, KeyboardEvent } from 'react';
-import { Currency } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
 import { CURRENCIES } from '../utils/constants';
 
 interface MultiCurrencySelectProps {
@@ -62,16 +61,6 @@ const MultiCurrencySelect: React.FC<MultiCurrencySelectProps> = ({
     }
   };
 
-  // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleToggle();
-    } else if (e.key === 'Escape') {
-      setIsOpen(false);
-    }
-  };
-
   // Toggle currency selection
   const handleCurrencyToggle = (currencyCode: string) => {
     const newSelectedCurrencies = selectedCurrencies.includes(currencyCode)
@@ -122,8 +111,6 @@ const MultiCurrencySelect: React.FC<MultiCurrencySelectProps> = ({
           type="button"
           id={`${id}-button`}
           onClick={handleToggle}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
           className={`w-full flex justify-between items-center px-4 py-3 bg-white dark:bg-dark-300 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm transition-all duration-200
             ${disabled 
               ? 'opacity-60 cursor-not-allowed' 

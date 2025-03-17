@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import Converter from './pages/Converter';
 import HistoricalRates from './pages/HistoricalRates';
 import Settings from './pages/Settings';
+import HelpGuide from './components/HelpGuide';
 import { UserPreferencesProvider, useUserPreferences } from './context/UserPreferencesContext';
+import { analytics } from './utils/analytics';
 
 // Logo component
 const Logo = () => (
@@ -68,6 +70,16 @@ const NavBar: React.FC = () => {
                 }`}
               >
                 Settings
+              </Link>
+              <Link 
+                to="/help" 
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  isActive('/help') 
+                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                Help
               </Link>
             </div>
           </div>
@@ -150,6 +162,17 @@ const NavBar: React.FC = () => {
             >
               Settings
             </Link>
+            <Link 
+              to="/help" 
+              className={`block px-3 py-2 rounded-lg text-base font-medium ${
+                isActive('/help') 
+                  ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Help
+            </Link>
           </div>
         </div>
       )}
@@ -179,16 +202,33 @@ const Footer: React.FC = () => {
   );
 };
 
+// Analytics tracker component
+const AnalyticsTracker: React.FC = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Track page view when location changes
+    analytics.trackPageView({
+      path: location.pathname,
+      title: document.title
+    });
+  }, [location]);
+  
+  return null;
+};
+
 // Main app layout with routes
 const AppRoutes: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-dark-100 text-gray-900 dark:text-white transition-colors duration-300">
+      <AnalyticsTracker />
       <NavBar />
       <main className="flex-grow py-6">
         <Routes>
           <Route path="/" element={<Converter />} />
           <Route path="/historical" element={<HistoricalRates />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/help" element={<HelpGuide />} />
         </Routes>
       </main>
       <Footer />

@@ -67,13 +67,80 @@ This application uses the Exchange Rates API to fetch real-time and historical e
 
 ## Deployment
 
-The application can be deployed to Netlify or any other static site hosting service:
+### Netlify Deployment
 
-```
-npm run build
-```
+This application is configured for easy deployment to Netlify:
 
-This will create a production-ready build in the `build` directory.
+#### Option 1: Deploy via Netlify UI
+
+1. Create a production build:
+   ```
+   npm run build
+   ```
+
+2. Create a Netlify account at [https://app.netlify.com/signup](https://app.netlify.com/signup)
+
+3. Go to [https://app.netlify.com/start](https://app.netlify.com/start) and drag-and-drop the `build` folder from your project
+
+4. Configure your site name and settings
+
+5. Add the environment variable in Netlify:
+   - Go to Site settings > Build & deploy > Environment
+   - Add environment variable: `REACT_APP_EXCHANGE_API_KEY` with your API key
+
+#### Option 2: Deploy via Netlify CLI
+
+1. Install Netlify CLI:
+   ```
+   npm install netlify-cli -g
+   ```
+
+2. Login to Netlify:
+   ```
+   netlify login
+   ```
+
+3. Initialize a new Netlify site:
+   ```
+   netlify init
+   ```
+
+4. Follow the prompts to set up your site
+
+5. Deploy your site:
+   ```
+   netlify deploy --prod
+   ```
+
+6. Add the environment variable in Netlify:
+   - Go to Site settings > Build & deploy > Environment
+   - Add environment variable: `REACT_APP_EXCHANGE_API_KEY` with your API key
+
+#### Option 3: Connect to GitHub for Continuous Deployment
+
+1. Push your code to a GitHub repository
+
+2. In Netlify, go to "Add new site" > "Import an existing project"
+
+3. Select GitHub and authorize Netlify
+
+4. Select your repository
+
+5. Configure build settings:
+   - Build command: `npm run build`
+   - Publish directory: `build`
+
+6. Add the environment variable:
+   - Expand "Advanced build settings"
+   - Add environment variable: `REACT_APP_EXCHANGE_API_KEY` with your API key
+
+7. Click "Deploy site"
+
+Your site will be deployed and automatically updated whenever you push changes to your GitHub repository.
+
+### Accessing Your Deployed Site
+
+Once deployed, your site will be available at a Netlify subdomain (e.g., `your-app-name.netlify.app`). You can configure a custom domain in the Netlify settings.
 
 ## License
 

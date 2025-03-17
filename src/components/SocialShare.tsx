@@ -12,14 +12,14 @@ const SocialShare: React.FC<SocialShareProps> = ({ result, className = '' }) => 
   
   if (!result) return null;
   
-  const { fromCurrency, toCurrency, amount, result: convertedAmount, rate, date } = result;
+  const { fromCurrency, toCurrency, amount, result: convertedAmount, rate } = result;
   
   const fromCurrencyData = CURRENCIES.find(c => c.code === fromCurrency);
   const toCurrencyData = CURRENCIES.find(c => c.code === toCurrency);
   
   if (!fromCurrencyData || !toCurrencyData) return null;
   
-  const shareText = `I just converted ${amount} ${fromCurrencyData.name} (${fromCurrencyData.symbol}) to ${convertedAmount.toFixed(2)} ${toCurrencyData.name} (${toCurrencyData.symbol}) using the Currency Converter app! Exchange rate: 1 ${fromCurrency} = ${rate} ${toCurrency}`;
+  const shareText = `${amount} ${fromCurrency} = ${convertedAmount.toFixed(4)} ${toCurrency} | Exchange Rate: 1 ${fromCurrency} = ${rate.toFixed(4)} ${toCurrency}`;
   
   const shareVia = (platform: string) => {
     let url = '';

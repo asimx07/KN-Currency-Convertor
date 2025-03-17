@@ -17,118 +17,124 @@ interface UseExchangeRatesResult {
 }
 
 const useExchangeRates = (baseCurrency: string = DEFAULT_BASE_CURRENCY): UseExchangeRatesResult => {
-  const [rates, setRates] = useState<ExchangeRate | null>(getRatesFromStorage());
+  // Get initial rates from storage only once during initialization
+  const initialRatesRef = useRef(getRatesFromStorage());
+  
+  // State management
+  const [rates, setRates] = useState<ExchangeRate | null>(initialRatesRef.current);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(
-    rates?.timestamp ? new Date(rates.timestamp) : null
+    initialRatesRef.current?.timestamp ? new Date(initialRatesRef.current.timestamp) : null
   );
   
-  // Use a ref to track if a fetch is in progress to prevent multiple simultaneous fetches
+  // Refs to prevent dependency cycles
   const isFetchingRef = useRef(false);
-  // Use a ref to store the interval ID
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const fetchRates = useCallback(async () => {
-    // If already fetching or loading state is true, don't fetch again
-    if (isFetchingRef.current || loading) return;
+  const baseCurrencyRef = useRef(baseCurrency);
+  const intervalIdRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Update baseCurrency ref when prop changes
+  useEffect(() => {
+    const prevBaseCurrency = baseCurrencyRef.current;
+    baseCurrencyRef.current = baseCurrency;
+    
+    // Only fetch if base currency actually changed
+    if (prevBaseCurrency !== baseCurrency) {
+      fetchRatesInternal();
+    }
+  }, [baseCurrency]);
+  
+  // Internal fetch function that doesn't depend on any state
+  const fetchRatesInternal = useCallback(() => {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      return Promise.resolve();
+    }
     
     isFetchingRef.current = true;
     setLoading(true);
     setError(null);
     
-    try {
-      // If API key is not set, show a warning but continue with fallback data
-      if (!API_KEY) {
-        console.warn('API key is not set. Using fallback exchange rates.');
-      }
-      
-      const freshRates = await getLatestRates(baseCurrency);
-      setRates(freshRates);
-      setLastUpdated(new Date(freshRates.timestamp));
-      saveRatesToStorage(freshRates);
-    } catch (err) {
-      // Improved error handling with more specific error messages
-      let errorMessage = 'Unknown error occurred';
-      
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      
-      // Check for axios error with response data
-      const axiosError = err as any;
-      if (axiosError.response) {
-        const status = axiosError.response.status;
-        const data = axiosError.response.data;
+    return getLatestRates(baseCurrencyRef.current)
+      .then(freshRates => {
+        setRates(freshRates);
+        setLastUpdated(new Date(freshRates.timestamp));
+        saveRatesToStorage(freshRates);
+        return freshRates;
+      })
+      .catch(err => {
+        // Error handling
+        let errorMessage = 'Unknown error occurred';
         
-        if (status === 400) {
-          errorMessage = `Bad request (400): ${data?.error?.info || 'Invalid parameters'}`;
-          console.error('API 400 error details:', data);
-        } else if (status === 401) {
-          errorMessage = 'API key is invalid or expired (401)';
-        } else if (status === 429) {
-          errorMessage = 'Rate limit exceeded (429). Try again later.';
-        } else {
-          errorMessage = `API error (${status}): ${data?.error?.info || errorMessage}`;
+        if (err instanceof Error) {
+          errorMessage = err.message;
         }
-      }
-      
-      console.error('Error fetching latest rates:', errorMessage);
-      setError(new Error(errorMessage));
-      
-      // If we have cached rates, continue using them
-      const cachedRates = getRatesFromStorage();
-      if (cachedRates) {
-        console.log('Using cached rates due to API error');
-        setRates(cachedRates);
-        setLastUpdated(new Date(cachedRates.timestamp));
-      }
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-    }
-  }, [baseCurrency, loading]);
-
-  // Initial fetch and periodic refresh
+        
+        const axiosError = err as any;
+        if (axiosError.response) {
+          const status = axiosError.response.status;
+          const data = axiosError.response.data;
+          
+          if (status === 400) {
+            errorMessage = `Bad request (400): ${data?.error?.info || 'Invalid parameters'}`;
+          } else if (status === 401) {
+            errorMessage = 'API key is invalid or expired (401)';
+          } else if (status === 429) {
+            errorMessage = 'Rate limit exceeded (429). Try again later.';
+          } else {
+            errorMessage = `API error (${status}): ${data?.error?.info || errorMessage}`;
+          }
+        }
+        
+        console.error('Error fetching latest rates:', errorMessage);
+        setError(new Error(errorMessage));
+        
+        // Fallback to cached rates
+        const cachedRates = getRatesFromStorage();
+        if (cachedRates) {
+          console.log('Using cached rates due to API error');
+          setRates(cachedRates);
+          setLastUpdated(new Date(cachedRates.timestamp));
+        }
+        
+        throw err;
+      })
+      .finally(() => {
+        setLoading(false);
+        isFetchingRef.current = false;
+      });
+  }, []);
+  
+  // Public refresh function
+  const refreshRates = useCallback((): Promise<void> => {
+    return fetchRatesInternal()
+      .then(() => {}) // Convert any successful result to void
+      .catch(() => {}); // Swallow errors as they're already handled in fetchRatesInternal
+  }, [fetchRatesInternal]);
+  
+  // Setup initial fetch and interval - only run once on mount
   useEffect(() => {
-    // Check if we need to fetch fresh rates
-    if (!rates || areRatesStale(REFRESH_INTERVAL)) {
-      fetchRates();
+    // Initial fetch if needed
+    const shouldFetchInitially = !initialRatesRef.current || areRatesStale(REFRESH_INTERVAL);
+    
+    if (shouldFetchInitially) {
+      fetchRatesInternal();
     }
     
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    // Set up interval for periodic refresh
+    intervalIdRef.current = setInterval(() => {
+      fetchRatesInternal();
+    }, REFRESH_INTERVAL * 3);
     
-    // Set up periodic refresh with a longer interval (30 minutes instead of 10)
-    intervalRef.current = setInterval(() => {
-      fetchRates();
-    }, REFRESH_INTERVAL * 3); // Triple the refresh interval
-    
+    // Cleanup on unmount
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
       }
     };
-  }, [fetchRates, rates]);
-
-  // Refresh when base currency changes
-  useEffect(() => {
-    // Only fetch if the base currency changes and we don't have rates for that currency
-    if (!rates || rates.base !== baseCurrency) {
-      fetchRates();
-    }
-  }, [baseCurrency, fetchRates, rates]);
-
-  // Manual refresh function that users can trigger
-  const refreshRates = useCallback(async () => {
-    // Only allow manual refresh if not already fetching
-    if (!isFetchingRef.current) {
-      await fetchRates();
-    }
-  }, [fetchRates]);
-
+  }, []); // Empty dependency array - only run on mount/unmount
+  
   return {
     rates,
     loading,
