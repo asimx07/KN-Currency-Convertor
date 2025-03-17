@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import CurrencySelect from '../components/CurrencySelect';
 import HistoricalChart from '../components/HistoricalChart';
 import HistoricalChartDetails from '../components/HistoricalChartDetails';
@@ -17,13 +17,13 @@ const HistoricalRates: React.FC = () => {
   const [selectedRange, setSelectedRange] = useState<string>('30d');
   const [viewMode, setViewMode] = useState<ViewMode>('chart');
   
-  // Define date range options as a constant to avoid unused state
-  const dateRangeOptions = [
+  // Define date range options as a memoized constant to avoid dependency changes
+  const dateRangeOptions = useMemo(() => [
     { value: '7d', label: '7 Days', days: 7 },
     { value: '30d', label: '30 Days', days: 30 },
     { value: '6m', label: '6 Months', days: 180 },
     { value: '1y', label: '1 Year', days: 365 },
-  ];
+  ], []);
 
   useEffect(() => {
     const fetchHistoricalData = async () => {
