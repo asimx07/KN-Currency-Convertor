@@ -130,12 +130,25 @@ A web-based currency converter that allows users to:
 - [x] 5.1 Optimize API calls and implement proper caching strategy
 - [x] 5.2 Add comprehensive error handling and fallbacks
 - [x] 5.3 Implement intelligent fallback using localStorage data
-- [ ] 5.4 Add unit tests for core functionality
-- [ ] 5.5 Add integration tests for API interactions
+- [x] 5.4 Add unit tests for core functionality
+  - Implemented tests for currency conversion utilities
+  - Added tests for number formatting and validation
+  - Created tests for localStorage caching
+  - Added tests for error handling scenarios
+- [x] 5.5 Add integration tests for API interactions
+  - Implemented tests for exchange rate fetching
+  - Added tests for error handling and fallback scenarios
+  - Created tests for rate updates and refresh logic
+  - Added tests for API response validation
+- [x] 5.6 Add component tests
+  - Implemented tests for AmountInput component
+  - Added tests for user interactions and validation
+  - Created tests for loading and error states
+  - Added tests for accessibility features
 - [x] 5.7 Optimize for mobile devices
 - [x] 5.8 Fix performance issues and state management bugs
 
-**Progress Marker 5**: ❌ Application optimized and tested (Partially completed)
+**Progress Marker 5**: ✅ Application optimized and tested
 
 ## Phase 6: Deployment and Documentation [Week 6]
 - [ ] 6.1 Prepare build for production
@@ -169,7 +182,7 @@ A web-based currency converter that allows users to:
 - **Charts**: Chart.js ✅
 - **HTTP Client**: Axios ✅
 - **Form Handling**: React Hook Form ❌
-- **Testing**: Jest and React Testing Library ❌
+- **Testing**: Jest and React Testing Library ✅
 
 ## Development Tools
 - **Package Manager**: npm ✅

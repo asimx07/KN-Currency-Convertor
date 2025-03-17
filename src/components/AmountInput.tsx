@@ -1,8 +1,11 @@
 import React from 'react';
 
 interface AmountInputProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: number;
+  onChange: (value: number) => void;
+  isLoading?: boolean;
+  error?: string;
+  className?: string;
   currencyCode?: string;
   label?: string;
   id?: string;
@@ -11,21 +14,26 @@ interface AmountInputProps {
 const AmountInput: React.FC<AmountInputProps> = ({
   value,
   onChange,
+  isLoading = false,
+  error,
+  className = '',
   currencyCode,
   label = 'Amount',
   id = 'amount-input'
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    
-    // Only allow numbers and decimal point
-    if (newValue === '' || /^[0-9]*\.?[0-9]*$/.test(newValue)) {
-      onChange(newValue);
+    const newValue = parseFloat(e.target.value) || 0;
+    onChange(newValue);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      onChange(value);
     }
   };
 
   return (
-    <div className="w-full">
+    <div className={`w-full ${className}`}>
       <label 
         htmlFor={id} 
         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
@@ -35,13 +43,25 @@ const AmountInput: React.FC<AmountInputProps> = ({
       
       <div className="relative rounded-lg shadow-sm">
         <input
-          type="text"
+          type="number"
           id={id}
+          role="spinbutton"
           value={value}
           onChange={handleChange}
-          className="block w-full pl-4 pr-12 py-3 bg-white dark:bg-dark-300 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+          onKeyDown={handleKeyDown}
+          disabled={isLoading}
+          className={`
+            block w-full pl-4 pr-12 py-3 bg-white dark:bg-gray-800
+            border border-gray-300 dark:border-gray-600 rounded-lg 
+            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+            transition-colors duration-200 text-gray-900 dark:text-white
+            disabled:opacity-50 disabled:cursor-not-allowed
+            ${error ? 'border-red-500 dark:border-red-400' : ''}
+          `}
           placeholder="0.00"
           aria-label={currencyCode ? `Amount in ${currencyCode}` : 'Amount'}
+          aria-invalid={!!error}
+          aria-describedby={error ? 'amount-error' : undefined}
         />
         
         {currencyCode && (
@@ -52,6 +72,16 @@ const AmountInput: React.FC<AmountInputProps> = ({
           </div>
         )}
       </div>
+      
+      {error && (
+        <p
+          id="amount-error"
+          className="mt-1 text-sm text-red-500 dark:text-red-400"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 };
