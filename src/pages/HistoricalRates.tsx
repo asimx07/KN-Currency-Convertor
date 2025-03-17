@@ -16,7 +16,8 @@ const HistoricalRates: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRange, setSelectedRange] = useState<string>('30d');
   const [viewMode, setViewMode] = useState<ViewMode>('chart');
-
+  
+  // Define date range options as a constant to avoid unused state
   const dateRangeOptions = [
     { value: '7d', label: '7 Days', days: 7 },
     { value: '30d', label: '30 Days', days: 30 },
@@ -44,7 +45,7 @@ const HistoricalRates: React.FC = () => {
     };
 
     fetchHistoricalData();
-  }, [baseCurrency, targetCurrency, selectedRange]);
+  }, [baseCurrency, targetCurrency, selectedRange, dateRangeOptions]);
 
   const handleBaseChange = (currency: string) => {
     setBaseCurrency(currency);
